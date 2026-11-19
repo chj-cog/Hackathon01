@@ -63,8 +63,8 @@ def test_area_ids():
 
 
 def test_response_has_exactly_three_fields_and_mock_marked(monkeypatch):
-    fake_llms(monkeypatch, SINGLE, lambda m: "홍대의 월별 추정매출 합계를 정리했습니다.")
-    r = client.post(URL, json={"question": "홍대의 음식점 월별 매출을 보여줘."})
+    fake_llms(monkeypatch, SINGLE, lambda m: "홍대의 분기별 추정매출 합계를 정리했습니다.")
+    r = client.post(URL, json={"question": "홍대의 음식점 분기별 매출을 보여줘."})
     assert r.status_code == 200
     b = r.json()
     assert set(b) == {"area", "sql", "text"}
@@ -99,7 +99,7 @@ def test_text_uses_only_calc_numbers_when_model_complies(monkeypatch):
         return "첫 번째 결과: " + line
 
     fake_llms(monkeypatch, SINGLE, good)
-    r = client.post(URL, json={"question": "홍대의 음식점 월별 매출을 보여줘."})
+    r = client.post(URL, json={"question": "홍대의 음식점 분기별 매출을 보여줘."})
     assert r.status_code == 200 and "추정매출 합계" in r.json()["text"]
 
 
@@ -111,7 +111,7 @@ def test_invented_number_falls_back_to_template(monkeypatch):
         return "홍대 매출은 987654321원으로 성수의 3.7배입니다."
 
     fake_llms(monkeypatch, SINGLE, bad)
-    r = client.post(URL, json={"question": "홍대의 음식점 월별 매출을 보여줘."})
+    r = client.post(URL, json={"question": "홍대의 음식점 분기별 매출을 보여줘."})
     text = r.json()["text"]
     assert len(calls) == explain.MAX_ATTEMPTS  # 재시도 후 포기
     assert "987654321" not in text and "3.7" not in text
@@ -197,7 +197,7 @@ def test_real_engine_result_has_no_mock_prefix(monkeypatch):
 
     app.dependency_overrides[calc_route._calculator] = lambda: RealLike()
     fake_llms(monkeypatch, SINGLE, lambda m: "설명입니다.")
-    r = client.post(URL, json={"question": "홍대의 음식점 월별 매출을 보여줘."})
+    r = client.post(URL, json={"question": "홍대의 음식점 분기별 매출을 보여줘."})
     assert r.status_code == 200 and "x-is-mock" not in r.headers
     assert not r.json()["text"].startswith("[테스트용")
 
@@ -207,7 +207,7 @@ def test_existing_calc_result_accepts_executed_sql_optional():
         AnalysisPlan.model_validate(dict(
             intent="region_comparison", regions=["성수"], industries=[],
             metrics=[{"column": "est_sales", "op": "sum"}], group_by=["region"],
-            comparison="region", filters=[], period=None, time_column="year_month")),
+            comparison="region", filters=[], period=None, time_column="quarter")),
         "ds", "rid")
     assert isinstance(req, CalcRequest)
 
@@ -220,7 +220,7 @@ def test_ranking_judgment_words_rejected(monkeypatch):
         return "홍대가 가장 높고 창업을 추천합니다."
 
     fake_llms(monkeypatch, SINGLE, ranked)
-    r = client.post(URL, json={"question": "홍대의 음식점 월별 매출을 보여줘."})
+    r = client.post(URL, json={"question": "홍대의 음식점 분기별 매출을 보여줘."})
     assert len(calls) == explain.MAX_ATTEMPTS
     assert "추천" not in r.json()["text"] and "계산 결과:" in r.json()["text"]
     assert explain.judgment_words("가장 큰 증가율") == ["가장"]

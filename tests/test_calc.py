@@ -24,7 +24,7 @@ def plan(**kw) -> AnalysisPlan:
         intent="region_comparison", regions=["성수", "홍대"], industries=["카페"],
         metrics=[{"column": "est_sales", "op": "sum"}], group_by=["region"],
         comparison="region", filters=[{"column": "industry", "op": "eq", "value": "카페"}],
-        period=None, time_column="year_month",
+        period=None, time_column="quarter",
     )
     base.update(kw)
     return AnalysisPlan.model_validate(base)

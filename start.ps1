@@ -5,7 +5,7 @@ $Root = $PSScriptRoot
 
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$Root'; .\.venv\Scripts\python -m uvicorn app.main:app --port 8000"
 Start-Sleep 3
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "ngrok http --url=$Domain 8000"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "ngrok http --domain=$Domain 8000"
 
 Write-Host "서버 주소: https://$Domain"
 Write-Host "확인: https://$Domain/health"

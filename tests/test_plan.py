@@ -40,7 +40,7 @@ def test_plan_ok(monkeypatch):
     r = client.post("/api/plan", json={"question": "성수와 홍대의 카페 매출을 비교해줘."})
     assert r.status_code == 200
     b = r.json()
-    assert b["status"] == "ok" and b["plan"]["time_column"] == "year_month"
+    assert b["status"] == "ok" and b["plan"]["time_column"] == "quarter"
     assert seen[0][1]["format"]["title"] == "PlanDraft"  # structured outputs 사용
 
 
@@ -191,9 +191,9 @@ def test_growth_requires_period(monkeypatch):
 def test_monthly_trend_includes_industry_filter(monkeypatch):
     p = {"status": "ok", "intent": "sales_trend", "regions": ["홍대"],
          "metrics": [{"column": "est_sales", "op": "sum"}], "group_by": ["industry", "region"]}
-    _, b = ask(monkeypatch, "홍대의 음식점 월별 매출을 보여줘.", p)
+    _, b = ask(monkeypatch, "홍대의 음식점 분기별 매출을 보여줘.", p)
     pl = b["plan"]
-    assert pl["industries"] == ["음식점"] and "year_month" in pl["group_by"]
+    assert pl["industries"] == ["음식점"] and "quarter" in pl["group_by"]
     assert {"column": "industry", "op": "eq", "value": "음식점"} in pl["filters"]
 
 

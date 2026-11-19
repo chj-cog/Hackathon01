@@ -12,7 +12,11 @@ from app.services import ollama
 
 MAX_ATTEMPTS = 2
 MOCK_PREFIX = "[테스트용 Mock 데이터 기반 - 실제 분석 결과가 아닙니다] "
-COLUMN_LABEL = {"est_sales": "추정매출", "store_count": "점포 수"}
+COLUMN_LABEL = {
+    "est_sales": "추정매출", "est_count": "매출 건수",
+    "weekday_sales": "주중 매출", "weekend_sales": "주말 매출",
+    "male_sales": "남성 매출", "female_sales": "여성 매출",
+}
 OP_LABEL = {"sum": "합계", "avg": "평균", "growth_rate": "증감률"}
 _NUM = re.compile(r"\d[\d,]*(?:\.\d+)?")
 

@@ -17,7 +17,7 @@ from app.schemas.calc import (
     CalcRow,
 )
 from app.services.calc.builder import _idx_to_ym, _ym_to_idx
-from app.services.dataset import INDUSTRIES, REGIONS, default_dataset
+from app.services.dataset import INDUSTRY_GROUPS, REGIONS, default_dataset
 
 MOCK_SOURCE = "MOCK_TEST_DATA"
 MOCK_VERSION = "mock-0"
@@ -28,12 +28,16 @@ def _h(*parts) -> int:
     return int(hashlib.sha256("|".join(map(str, parts)).encode()).hexdigest()[:8], 16)
 
 
-def _months(req: CalcRequest) -> list[str]:
+def _periods(req: CalcRequest) -> list[str]:
+    """시간 그룹 값. 시간 컬럼이 quarter 이면 분기 코드(2025Q4), 아니면 월."""
     p = req.period
+    quarterly = req.time_column == "quarter"
     if p and p.start and p.end:
         s, e = _ym_to_idx(p.start), _ym_to_idx(p.end)
+        if quarterly:
+            return [f"{i // 12}Q{i % 12 // 3 + 1}" for i in range(s, min(e, s + 23) + 1, 3)]
         return [_idx_to_ym(i) for i in range(s, min(e, s + 23) + 1)]
-    return ["2024-01", "2024-02", "2024-03"]
+    return ["2024Q1", "2024Q2", "2024Q3"] if quarterly else ["2024-01", "2024-02", "2024-03"]
 
 
 def _filter_values(req: CalcRequest, col: str, default: list[str]) -> list[str]:
@@ -47,7 +51,7 @@ def _formula(m) -> str:
     if m.op == "sum":
         return f"sum({m.column})"
     if m.op == "avg":
-        return f"mean({m.column})"
+        return f"sum({m.column}) / (기간 내 분기 수)  # 분기당 평균"
     return (
         f"{GROWTH_FORMULA}; current=sum({m.column}) over current_period, "
         f"baseline=sum({m.column}) over baseline_period; baseline==0 -> null"
@@ -81,9 +85,9 @@ class MockCalculator:
             if g == "region":
                 vals = _filter_values(req, "region", REGIONS)
             elif g == "industry":
-                vals = _filter_values(req, "industry", INDUSTRIES)
+                vals = _filter_values(req, "industry", INDUSTRY_GROUPS)
             elif g == req.time_column:
-                vals = _months(req)
+                vals = _periods(req)
             else:
                 vals = ["mock"]
             dims.append([(g, v) for v in vals])

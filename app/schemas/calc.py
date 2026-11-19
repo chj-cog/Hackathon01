@@ -81,7 +81,7 @@ class CalcError(BaseModel):
 
 
 class CalcResult(BaseModel):
-    spec_version: Literal["1.0"] = SPEC_VERSION
+    spec_version: Literal["1.0", "1.1"] = SPEC_VERSION  # 1.1 = 엔진의 ratio/share 확장 응답
     request_id: str
     status: Literal["ok", "error"]
     is_mock: bool = False  # 테스트용 Mock 결과면 반드시 true
