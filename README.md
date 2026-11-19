@@ -1,4 +1,4 @@
-# AIPAL LAB – B: AI 분석 API
+# AIPAL – B: AI 분석 API
 
 ```powershell
 python -m venv .venv
