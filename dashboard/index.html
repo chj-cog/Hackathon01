@@ -515,9 +515,12 @@ function init3D(){
   /* sky: a gradient texture as the scene background (an opaque canvas is needed for the bloom pass) */
   const skyCv=document.createElement('canvas');skyCv.width=2;skyCv.height=256;const skyCtx=skyCv.getContext('2d');
   const skyTex=new THREE.CanvasTexture(skyCv);scene.background=skyTex;
-  const skyA=new THREE.Color(SKY[band].s1),skyB=new THREE.Color(SKY[band].s2);
-  function drawSky(){const g=skyCtx.createLinearGradient(0,0,0,256);g.addColorStop(0,'#'+skyA.getHexString());g.addColorStop(.6,'#'+skyB.getHexString());g.addColorStop(1,'#0a0d12');skyCtx.fillStyle=g;skyCtx.fillRect(0,0,2,256);skyTex.needsUpdate=true}
-  drawSky();
+  const skyA=new THREE.Color(SKY[band].s1),skyB=new THREE.Color(SKY[band].s2),horizon=new THREE.Color('#0a0d12'),WHITE=new THREE.Color('#ffffff');
+  function drawSky(){const g=skyCtx.createLinearGradient(0,0,0,256);g.addColorStop(0,'#'+skyA.getHexString());g.addColorStop(.6,'#'+skyB.getHexString());g.addColorStop(1,'#'+horizon.getHexString());skyCtx.fillStyle=g;skyCtx.fillRect(0,0,2,256);skyTex.needsUpdate=true}
+  /* the sky also lights the scene: it is turned into an environment map (sky fill on the ground, reflections on glass towers) */
+  const pmrem=new THREE.PMREMGenerator(renderer);let envRT=null,envAge=99;
+  function updateEnv(){try{const t=pmrem.fromEquirectangular(skyTex);if(envRT)envRT.dispose();envRT=t;scene.environment=t.texture}catch(e){}envAge=0}
+  drawSky();updateEnv();
   const camera=new THREE.PerspectiveCamera(36,1,.1,150);
   const amb=new THREE.AmbientLight(0xffffff,.4);scene.add(amb);
   const sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(-8,16,10);scene.add(sun);
@@ -536,12 +539,12 @@ function init3D(){
     return cellH(i,j)*(1-u)*(1-w)+cellH(i+1,j)*u*(1-w)+cellH(i,j+1)*(1-u)*w+cellH(i+1,j+1)*u*w}
   const stp=weak?2:1,tg=new THREE.PlaneGeometry(72,48,(TNX-1)/stp,(TNZ-1)/stp);tg.rotateX(-Math.PI/2);
   {const p=tg.attributes.position,col=new Float32Array(p.count*3);
-    const URB=[.085,.088,.095],FOR=[.05,.08,.055],ROCK=[.11,.105,.1],BED=[.02,.03,.05];
+    const URB=[.19,.19,.2],FOR=[.1,.16,.095],ROCK=[.24,.225,.205],BED=[.04,.06,.09];
     for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),h=terH(x,z),m=h/EX;p.setY(i,h);
       const t1=smooth(30,110,m),t2=smooth(380,650,m);let c=URB.map((v,k)=>v+(FOR[k]-v)*t1);c=c.map((v,k)=>v+(ROCK[k]-v)*t2);
       if(h<0)c=BED;col.set(c,i*3)}
     tg.setAttribute('color',new THREE.BufferAttribute(col,3));tg.computeVertexNormals()}
-  const groundMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.95,metalness:0});
+  const groundMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.95,metalness:0,envMapIntensity:.4});
   scene.add(new THREE.Mesh(tg,groundMat));
 
   /* water: one plane at y=0; land sits above it, the carved channel below it, so the river keeps the real shape */
@@ -591,7 +594,7 @@ void main(){
   /* windows are drawn in world space so they keep their size while a tower grows or shrinks */
   function towerMat(color,seedV){
     const u={uWin:{value:1},uLit:{value:.5},uSeed:{value:seedV},uWinCol:{value:new THREE.Color(color).lerp(new THREE.Color('#ffffff'),.55)}};
-    const m=new THREE.MeshStandardMaterial({color:new THREE.Color(color).multiplyScalar(.28),emissive:color,emissiveIntensity:.15,roughness:.35,metalness:.45});
+    const m=new THREE.MeshStandardMaterial({color:new THREE.Color(color).multiplyScalar(.42),emissive:color,emissiveIntensity:.15,roughness:.2,metalness:.75});
     m.userData.u=u;
     m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,u);
       sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;\nvarying vec3 vWN;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWP=(modelMatrix*vec4(transformed,1.0)).xyz;\nvWN=normalize(mat3(modelMatrix)*objectNormal);');
@@ -615,7 +618,7 @@ void main(){
 
   /* background city: decorative instanced blocks (not data), kept low and away from the data towers and the water */
   const CN=weak?1400:4200,cityGeo=new THREE.BoxGeometry(1,1,1);cityGeo.translate(0,.5,0);
-  const cityMat=new THREE.MeshStandardMaterial({color:0x454c57,roughness:.7,metalness:.2});
+  const cityMat=new THREE.MeshStandardMaterial({color:0x5d636c,roughness:.7,metalness:.1,envMapIntensity:.35});
   const cityU={uLit:{value:.3},uWin:{value:.8},uSeed:{value:0},uWinCol:{value:new THREE.Color('#ffc890')}};
   cityMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,cityU);
     sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;\nvarying vec3 vWN;\nvarying float vCool;').replace('#include <begin_vertex>',`#include <begin_vertex>
@@ -704,19 +707,22 @@ void main(){
     const lk=reduce?1:Math.min(1,dt*1.8);
     L.amb.lerp(tmpC.set(LT.amb),lk);L.ambI+=(LT.ambI-L.ambI)*lk;L.sun.lerp(tmpC.set(LT.sun),lk);L.sunI+=(LT.sunI-L.sunI)*lk;
     L.sp.lerp(tmpV.set(...LT.sp),lk);L.emis+=(LT.emis-L.emis)*lk;L.lights+=(LT.lights-L.lights)*lk;L.ground.lerp(tmpC.set(LT.ground),lk);
-    amb.color.copy(L.amb);amb.intensity=L.ambI;sun.color.copy(L.sun);sun.intensity=L.sunI;sun.position.copy(L.sp);
-    scene.fog.color.copy(L.ground);
-    const ha=skyA.getHex(),hb=skyB.getHex();skyA.lerp(tmpC.set(LT.s1),lk);skyB.lerp(tmpC.set(LT.s2),lk);if(skyA.getHex()!==ha||skyB.getHex()!==hb)drawSky();
-    waterU.uSky.value.copy(skyB);waterU.uLights.value=L.lights;if(!reduce)waterU.uTime.value=now*.001;
-    cityU.uLit.value=.12+.5*L.lights;cityU.uWin.value=.25+.75*Math.min(1,L.emis);
-    if(bloom)bloom.strength=.22+.85*L.lights;
+    amb.color.copy(L.amb);amb.intensity=L.ambI*(1-.5*Math.max(0,Math.min(1,1-L.lights*1.1)));sun.color.copy(L.sun);sun.intensity=L.sunI;sun.position.copy(L.sp);
+    /* day = how much daylight (0 at night): distant land fades into a light sky-coloured haze in daytime, into dark at night */
+    const day=Math.max(0,Math.min(1,1-L.lights*1.1));
+    const ha=skyA.getHex(),hb=skyB.getHex(),hh=horizon.getHex();skyA.lerp(tmpC.set(LT.s1),lk);skyB.lerp(tmpC.set(LT.s2),lk);
+    horizon.copy(L.ground).lerp(tmpC.copy(skyB).lerp(WHITE,.3),day);scene.fog.color.copy(horizon);
+    envAge++;if(skyA.getHex()!==ha||skyB.getHex()!==hb||horizon.getHex()!==hh){drawSky();if(envAge>12)updateEnv()}else if(envAge===13)updateEnv();
+    waterU.uSky.value.copy(skyB);waterU.uDeep.value.set('#05101d').lerp(tmpC.set('#1f4f78'),day);waterU.uLights.value=L.lights;if(!reduce)waterU.uTime.value=now*.001;
+    cityU.uLit.value=.12+.5*L.lights;cityU.uWin.value=Math.max(0,Math.min(1,(L.emis-.25)/.6));
+    if(bloom){bloom.strength=1.05*L.lights;bloom.threshold=.7+.25*day}
     pulse=Math.max(0,pulse-dt*1.2);
     selLight.intensity=(1.2+1.4*L.emis)*(reduce?1:(.85+.15*Math.sin(now*.004)))+pulse*2;
     lightsMat.opacity=.08+.7*L.lights*(reduce?1:(.92+.08*Math.sin(now*.003)));
     cols.forEach(c=>{if(!reduce)c.m.scale.y+=(c.target-c.m.scale.y)*Math.min(1,dt*4);
       const on=c.a.id===sel,hv=c.a.id===hoverId,u=c.mat.userData.u;
       c.mat.emissiveIntensity=(on?.3:hv?.24:.1)*L.emis+.03+(on?pulse*.3:0);
-      u.uLit.value=.22+.5*L.lights;u.uWin.value=(on?1.5:hv?1.2:.8)*(.3+.7*Math.min(1,L.emis));
+      u.uLit.value=.22+.5*L.lights;u.uWin.value=(on?1.5:hv?1.2:.8)*(.1+.9*Math.min(1,L.emis));
       c.edgeMat.opacity=on?1:hv?.95:.45+.4*L.lights;
       if(on)selLight.position.y=c.by+c.m.scale.y+.8;
       const s=on&&!reduce?1+.3*Math.sin(now*.004):1;c.ring.scale.set(s,s,s);c.ring.material.opacity=on?.6:hv?.45:.12+.12*L.lights;
