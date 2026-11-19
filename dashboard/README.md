@@ -26,7 +26,7 @@ http://localhost:8765 (API 없이도 동작한다)
 
 ## B 분석 API 연결
 
-`상권에 물어보기`에 직접 입력한 질문을 `POST {API}/api/dashboard/analyze` 로 보낸다 (`docs/DASHBOARD_API.md`).
+지도 오른쪽 아래에 떠 있는 로봇 **펄이**를 누르면 질문 말풍선이 나오고, 고르면 대화 창이 열려 답한다. 대화 창에 직접 입력한 질문은 `POST {API}/api/dashboard/analyze` 로 보낸다 (`docs/DASHBOARD_API.md`).
 
 API 주소: 기본값은 `start.ps1` 의 ngrok 주소 (`https://bullion-predefine-phony.ngrok-free.dev`). 그 PC에서 `start.ps1` 이 실행 중이면 그냥 열어도 연결된다. 다른 주소를 쓰려면:
 
@@ -40,7 +40,7 @@ API 주소: 기본값은 `start.ps1` 의 ngrok 주소 (`https://bullion-predefin
 | 422 `needs_clarification` | `clarification_question` 을 그대로 보여줌, 계산 안 함 |
 | 401 / 5xx / 연결 실패 / 150초 초과 | 사유를 표시하고, 대시보드 내장 데이터로 답할 수 있는 질문이면 그 답을 "대시보드 데이터로 답했어요" 표시와 함께 보여줌 |
 
-`text` 는 HTML로 해석하지 않고 글자 그대로 넣는다. 아래 예시 질문 버튼은 API를 거치지 않고 내장 데이터로 바로 답한다.
+`text` 는 HTML로 해석하지 않고 글자 그대로 넣는다. 펄이의 질문 말풍선은 API를 거치지 않고 내장 데이터로 바로 답한다.
 
 ### B 쪽 설정 (서버 `.env`)
 
