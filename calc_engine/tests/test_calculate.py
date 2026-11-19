@@ -58,10 +58,13 @@ def test_q4_trend_year_month_alias_groups_by_quarter():
         filters=[{"column": "region", "op": "eq", "value": "성수"}, {"column": "industry", "op": "eq", "value": "커피-음료"}],
         period=None,
     )
-    assert status == 200 and len(body["results"]) == 20
+    assert status == 200 and len(body["results"]) == 22  # 2021Q1~2026Q2
     assert body["results"][0]["group"] == {"year_month": "2021Q1"}
     assert body["results"][0]["values"]["est_sales.sum"] == 11_000_139_138
-    assert body["results"][-1]["values"]["est_sales.sum"] == 15_496_172_851
+    assert body["results"][19]["group"] == {"year_month": "2025Q4"}
+    assert body["results"][19]["values"]["est_sales.sum"] == 15_496_172_851
+    assert body["results"][-1]["group"] == {"year_month": "2026Q2"}
+    assert body["results"][-1]["values"]["est_sales.sum"] == 17_096_057_556
     notes = body["results"][0]["notes"]
     assert any(n.startswith("quarter_granularity") for n in notes)
     assert any(n.startswith("pre_2024_basis_unconfirmed") for n in notes)
@@ -142,6 +145,18 @@ def test_errors_use_spec_format(body, status, code):
     assert "results" not in got
 
 
+def test_q11_seogyo_2026q2_matches_site():
+    # 상권분석서비스 사이트: 서교동 2026년 2분기 매출 3,642.8억 원
+    status, body = calc(metrics=[{"column": "est_sales", "op": "sum"}, {"column": "est_count", "op": "sum"}],
+                        filters=[{"column": "dong", "op": "eq", "value": "서교동"}],
+                        period={"start": "2026-04", "end": "2026-06"})
+    assert status == 200
+    v = body["results"][0]["values"]
+    assert v["est_sales.sum"] == 364_283_677_777
+    assert round(v["est_sales.sum"] / 3 / 8783 / 10_000) == 1383  # 사이트 점포당 월평균 1,383만 원
+    assert round(v["est_count.sum"] / 3 / 8783) == 582  # 사이트 월평균 매출건수 582건
+
+
 def test_health():
     body = client.get("/health").json()
-    assert body["rows"] == 7652 and body["quarters"] == ["20211", "20254"]
+    assert body["rows"] == 8385 and body["quarters"] == ["20211", "20262"]
