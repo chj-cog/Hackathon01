@@ -46,7 +46,7 @@ button{font:inherit;color:inherit}
 .tbtn{font-size:12px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 12px;cursor:pointer;color:var(--ink-2)}
 .tbtn[aria-pressed="true"]{color:var(--ink);border-color:rgba(255,255,255,.3)}
 
-.main{position:relative;flex:1;min-height:0;overflow:hidden}
+.main{position:relative;flex:1;min-height:0;overflow:hidden;overflow:clip}
 .main.l-open{--lw:352px} .main.r-open{--rw:412px}
 @media (max-width:820px){.main.l-open,.main.r-open{--lw:0px;--rw:0px}}
 
@@ -88,6 +88,9 @@ button{font:inherit;color:inherit}
 .side.left{left:12px;width:340px} .side.right{right:12px;width:400px}
 .side.left[data-open="false"]{transform:translateX(calc(-100% - 14px))}
 .side.right[data-open="false"]{transform:translateX(calc(100% + 14px))}
+/* a closed panel is hidden once it has slid out, so it can't be tabbed into or scrolled into view */
+.side[data-open="false"]{visibility:hidden;transition:transform .45s var(--ease),visibility 0s linear .45s}
+.side[data-open="false"] .handle{visibility:visible}
 @media (max-width:820px){.side.left,.side.right{width:min(86vw,380px)}}
 .side::before{content:"";position:absolute;inset:-1px;border-radius:16px;pointer-events:none;
   background:linear-gradient(var(--sel),var(--sel)) 0 0/14px 1px no-repeat,linear-gradient(var(--sel),var(--sel)) 0 0/1px 14px no-repeat;opacity:.7}
@@ -334,14 +337,14 @@ function hoverGroup(svg,item,html){
 
 /* panels */
 const mainEl=document.getElementById('main'),panels={left:document.getElementById('left'),right:document.getElementById('right')};
-/* below 1180px both panels would squeeze the map, so only one is open at a time (the report first) */
+/* below 1180px only the report starts open; each panel still slides open and shut on its own. On phones one at a time */
 const narrow=()=>innerWidth<1180;
 const state={left:!narrow(),right:!isMobile()};
 function setPanel(side,open){state[side]=open;panels[side].dataset.open=open;mainEl.classList.toggle(side==='left'?'l-open':'r-open',open);
   document.getElementById(side==='left'?'tLeft':'tRight').setAttribute('aria-pressed',open);
   const h=document.getElementById(side==='left'?'hLeft':'hRight');h.setAttribute('aria-expanded',open);
   h.textContent=side==='left'?(open?'‹':'›'):(open?'›':'‹');h.setAttribute('aria-label',(side==='left'?'왼쪽':'오른쪽')+' 패널 '+(open?'접기':'펼치기'));
-  if(open&&narrow()&&state[side==='left'?'right':'left'])setPanel(side==='left'?'right':'left',false);
+  if(open&&isMobile()&&state[side==='left'?'right':'left'])setPanel(side==='left'?'right':'left',false);
   if(scene3d)scene3d.dirty()}
 ['left','right'].forEach(s=>{const f=()=>setPanel(s,!state[s]);document.getElementById(s==='left'?'tLeft':'tRight').onclick=f;document.getElementById(s==='left'?'hLeft':'hRight').onclick=f;
   /* first layout: place panels without the slide, so phones don't flash both panels open */
