@@ -21,7 +21,9 @@ OP_LABEL = {"sum": "합계", "avg": "평균", "growth_rate": "증감률"}
 _NUM = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
 
-def _fmt_value(op: str, v: float | None, notes: list[str]) -> str:
+def _fmt_value(op: str, v: float | None, notes: list[str], column: str | None = None) -> str:
+    """표시 규칙 (docs/DATA.md 6절, C 합의): 금액=억 원 소수 첫째 자리, 증감률=부호 붙인 % 소수 첫째 자리,
+    건수=쉼표 정수. API 값은 반올림하지 않은 원본이며 표시할 때만 반올림한다."""
     if v is None:
         if "baseline_zero" in notes:
             return "산출 불가(기준 기간 값이 0)"
@@ -29,7 +31,11 @@ def _fmt_value(op: str, v: float | None, notes: list[str]) -> str:
             return "산출 불가(기준 기간 데이터 없음)"
         return "산출 불가"
     if op == "growth_rate":
-        return f"{v * 100:+.2f}%"
+        return f"{v * 100:+.1f}%"
+    if column is not None and column.endswith("_sales"):
+        return f"{v / 1e8:,.1f}억 원"
+    if column == "est_count":
+        return f"{v:,.0f}건"
     return f"{v:,.0f}" if float(v).is_integer() else f"{v:,.2f}"
 
 
@@ -60,7 +66,7 @@ def build_facts(plan: AnalysisPlan, result: CalcResult) -> list[str]:
         vals = []
         for m in a.operations:
             key = f"{m.column}.{m.op}"
-            vals.append(f"{COLUMN_LABEL.get(m.column, m.column)} {OP_LABEL[m.op]} {_fmt_value(m.op, r.values.get(key), r.notes)}")
+            vals.append(f"{COLUMN_LABEL.get(m.column, m.column)} {OP_LABEL[m.op]} {_fmt_value(m.op, r.values.get(key), r.notes, m.column)}")
         lines.append(f"[{g}] " + " / ".join(vals) + f" (사용 행 {r.rows_used:,})")
     return lines
 
@@ -114,11 +120,52 @@ def build_prompts(question: str, facts: list[str], is_mock: bool) -> tuple[str, 
     return system, user
 
 
+_SKIP_NOTE_CODES = ("baseline_zero", "baseline_missing")  # 값 옆에 '산출 불가'로 이미 표시
+
+
+def _note_parts(note: str) -> tuple[str, str]:
+    code, _, detail = note.partition(":")
+    return code.strip(), detail.strip()
+
+
+def build_caveats(result: CalcResult) -> list[str]:
+    """엔진 notes -> 사용자에게 반드시 전달할 주의·참고 문구. 모델과 무관하게 결정적으로 생성."""
+    region_counts: dict[str, str] = {}
+    cautions: list[str] = []
+    refs: list[str] = []
+    for row in result.results:
+        for note in row.notes:
+            if note.startswith("MOCK_TEST_DATA"):  # Mock 표시는 별도(접두 문구)로 처리
+                continue
+            code, detail = _note_parts(note)
+            if code in _SKIP_NOTE_CODES:
+                continue
+            if code == "region_dong_count":
+                region_counts[row.group.get("region", "전체")] = detail
+            elif code == "pre_2024_basis_unconfirmed":
+                cautions.append(f"※ 주의: {detail or note}")
+            elif code == "industry_group":
+                refs.append(f"※ 업종 묶음: {detail}")
+            else:
+                refs.append(f"※ 참고: {detail or note}")
+    out = list(dict.fromkeys(cautions))
+    if region_counts:
+        joined = ", ".join(f"{r} {n}개" for r, n in region_counts.items())
+        out.append(f"※ 지역별 포함 행정동 수: {joined} (지역 합계는 포함된 동 개수의 영향을 받습니다)")
+    out += list(dict.fromkeys(refs))
+    return out
+
+
+def _with_caveats(text: str, caveats: list[str]) -> str:
+    return text if not caveats else text + "\n" + "\n".join(caveats)
+
+
 async def generate_explanation(
     question: str, plan: AnalysisPlan, result: CalcResult
 ) -> tuple[str, bool]:
-    """(text, used_fallback). 호출 실패(OllamaError)는 그대로 전파."""
+    """(text, used_fallback). 호출 실패(OllamaError)는 그대로 전파. 엔진 notes는 끝에 덧붙인다."""
     facts = build_facts(plan, result)
+    caveats = build_caveats(result)
     if not result.results:
         return fallback_text(facts, False), True
     system, user = build_prompts(question, facts, result.is_mock)
@@ -127,5 +174,5 @@ async def generate_explanation(
         text = text.strip()
         if (text and not ungrounded_numbers(text, facts, len(result.results))
                 and not judgment_words(text)):
-            return text, False
-    return fallback_text(facts, True), True
+            return _with_caveats(text, caveats), False
+    return _with_caveats(fallback_text(facts, True), caveats), True

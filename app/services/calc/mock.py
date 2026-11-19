@@ -108,7 +108,7 @@ class MockCalculator:
                     else:
                         values[key] = round(((seed % 4000) - 1000) / 10000, 4)
                 elif m.op == "sum":
-                    values[key] = float(1000 + seed % 9000)
+                    values[key] = float((1000 + seed % 9000) * 1_000_000)  # 가짜 값 (10~100억 원 규모)
                 else:
                     values[key] = round(10 + (seed % 900) / 10, 2)
             rows.append(CalcRow(group=group, values=values, rows_used=n, notes=notes))
