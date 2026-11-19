@@ -48,3 +48,7 @@ API 주소: 기본값은 `start.ps1` 의 ngrok 주소 (`https://bullion-predefin
 - `X-Is-Mock` 헤더를 브라우저가 읽으려면 `CORSMiddleware(..., expose_headers=["X-Is-Mock","X-Data-Source"])` 필요 (없어도 `text` 접두어로 Mock 표시는 됨)
 - ngrok 무료 주소는 브라우저 경고 페이지가 끼므로 대시보드가 `ngrok-skip-browser-warning` 헤더를 보낸다
 - `API_KEY` 는 이 페이지에 넣지 않는다. 공개 배포에서 키가 필요하면 Vercel 함수 같은 서버 쪽 프록시가 키를 붙여야 한다
+
+## 로봇 펄이 (3D)
+
+`pearl/pearl_robot.blend` 를 블렌더로 모델링하고, `pearl.glb`(3D)와 표정 이미지 4장(`pearl_idle/think/talk/happy.webp`), 얼굴(`pearl_face.webp`)로 내보냈다. 페이지 안에는 같은 파일이 base64 로 들어 있어 따로 불러오지 않는다 (이 폴더는 원본 보관용). 데스크톱은 실제 3D(고개가 마우스를 따라가고, 깜빡이고, 생각 중엔 눈을 굴리고, 말할 땐 입이 움직임), 폰·느린 기기·동작 줄이기 설정에서는 렌더 이미지로 보인다.
