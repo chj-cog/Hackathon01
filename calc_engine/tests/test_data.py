@@ -20,8 +20,11 @@ def upload(text, encoding="utf-8"):
 # ---- 읽기·검사 ----
 
 def test_default_data_shape():
-    assert df.shape == (7652, 54)
+    assert df.shape == (8385, 54)
     assert set(df["지역"]) == {"성수", "홍대", "건대", "강남", "이태원"}
+    assert df["기준_년분기_코드"].nunique() == 22  # 2021Q1~2026Q2
+    assert len(df[df["기준_년분기_코드"] <= "20254"]) == 7652  # 공식 파일 구간은 늘리기 전과 같음
+    assert "?" not in "".join(df["행정동_코드_명"].unique())  # Sheet 내려받기의 '·'→'?' 깨짐이 없어야 함
 
 
 def test_cp949_original_gets_region_and_drops_other_dongs():
