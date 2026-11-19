@@ -18,9 +18,9 @@ http://localhost:8765 (API 없이도 동작한다)
 
 `상권에 물어보기`에 직접 입력한 질문을 `POST {API}/api/dashboard/analyze` 로 보낸다 (`docs/DASHBOARD_API.md`).
 
-API 주소 지정 (둘 중 하나):
+API 주소: 기본값은 `start.ps1` 의 ngrok 주소 (`https://bullion-predefine-phony.ngrok-free.dev`). 그 PC에서 `start.ps1` 이 실행 중이면 그냥 열어도 연결된다. 다른 주소를 쓰려면:
 
-1. 주소창: `http://localhost:8765/?api=http://127.0.0.1:8000` (이 브라우저에 기억됨, `?api=` 로 지움)
+1. 주소창: `http://localhost:8765/?api=http://127.0.0.1:8000` (이 브라우저에 기억됨, `?api=` 로 기본값으로 되돌림, `?api=off` 로 API 끔)
 2. `index.html` 의 `<meta name="aipal-api" content="">` 에 주소 입력
 
 | API 응답 | 대시보드 동작 |

@@ -2,7 +2,7 @@
 <html lang="ko">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<!-- B 분석 API 주소. 비워 두면 대시보드 내장 데이터로만 답한다. 페이지 주소에 ?api=https://… 를 붙여도 된다 (이 브라우저에 기억됨).
+<!-- B 분석 API 주소. 비워 두면 start.ps1 의 ngrok 주소를 쓴다. 페이지 주소의 ?api=https://… 가 우선 (이 브라우저에 기억됨, ?api=off 로 끔).
      API 키는 여기에 넣지 않는다 (공개 저장소·공개 페이지). -->
 <meta name="aipal-api" content="">
 <title>서울 상권 펄스</title>
@@ -792,11 +792,14 @@ function ask(q,res,instant){
   steps.forEach(s=>s.classList.remove('on'));document.getElementById('sql').textContent='…';document.getElementById('answer').textContent='분석 중…';
   steps.forEach((s,i)=>askTimer.push(setTimeout(()=>{s.classList.add('on');if(i===1)document.getElementById('sql').textContent=res.sql;if(i===3)fin()},250+i*380)));
 }
-/* team AI analysis API (repo: app/api/routes/dashboard.py). The base URL comes from ?api=… (remembered in this
-   browser) or <meta name="aipal-api">; no key is kept in this page. Typed questions go to the API; the preset buttons
-   and any failure fall back to the answers computed from this page's own data, labelled as such. */
+/* team AI analysis API (repo: app/api/routes/dashboard.py). Order: ?api=… (remembered in this browser; ?api= clears it,
+   ?api=off turns the API off), then <meta name="aipal-api">, then the team's ngrok address from start.ps1.
+   No key is kept in this page. Typed questions go to the API; the preset buttons and any failure fall back to the
+   answers computed from this page's own data, labelled as such. */
+const DEFAULT_API='https://bullion-predefine-phony.ngrok-free.dev';
 const API_BASE=(()=>{let u='';try{const q=new URLSearchParams(location.search).get('api');if(q!==null)localStorage.setItem('aipalApi',q);u=q!==null?q:(localStorage.getItem('aipalApi')||'')}catch(e){}
-  if(!u){const m=document.querySelector('meta[name="aipal-api"]');u=m?m.content:''}return u.trim().replace(/\/+$/,'')})();
+  if(!u){const m=document.querySelector('meta[name="aipal-api"]');u=m?m.content:''}
+  u=(u||DEFAULT_API).trim();return u==='off'?'':u.replace(/\/+$/,'')})();
 const API_AREA={geondae:'kondae'};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const API_H={'ngrok-skip-browser-warning':'1'};
