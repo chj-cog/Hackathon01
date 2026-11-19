@@ -14,7 +14,7 @@
 /* Concept: a control room over Seoul's shopping streets. The 3D map fills the screen; ranking (left) and
    area report (right) are glass panels that slide open and closed. Signboard type (Black Han Sans) for place
    names and the clock, Plex Sans KR for reading, Plex Mono for every number.
-   Color rule: orange = the selected area (map, line, bars, ranking); blue/gray = every other area.
+   Color rule: neon pink = the selected area (map, line, bars, ranking); blue/gray = every other area.
    Single dark theme by choice. */
 @property --sky1{syntax:'<color>';inherits:true;initial-value:#160f2e}
 @property --sky2{syntax:'<color>';inherits:true;initial-value:#c0475c}
@@ -22,7 +22,7 @@
   color-scheme: dark;
   --bg:#0a0d12; --panel:#0f131a; --glass:rgba(11,14,20,.84); --ink:#eef0f3; --ink-2:#b9c0ca; --muted:#7d8592;
   --line:#1e2530; --grid:#1b222c; --axis:#2a3340; --edge:rgba(255,255,255,.09);
-  --sel:#f26b2a; --sel-2:#a9491d; --base:#4a8fe0; --other:#3a4350; --good:#2fb35f; --accent:#9cc3f5;
+  --sel:#ee3e98; --sel-2:#a3236a; --base:#2598d0; --other:#3a4350; --good:#2fb35f; --accent:#9cc3f5;
   --f-sign:"Black Han Sans","IBM Plex Sans KR",system-ui,sans-serif;
   --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-num:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -171,8 +171,8 @@ th{color:var(--muted)}
 .trace span.on::before{content:"✓ ";color:var(--good)}
 .answer{font-size:13px;line-height:1.7}
 .src{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.02em;padding:1px 7px;border-radius:999px;margin:0 6px 4px 0;border:1px solid var(--line);color:var(--ink-2)}
-.src.ai{border-color:rgba(74,143,224,.6);color:#9cc3f0}
-.src.mock{border-color:rgba(242,107,42,.7);color:#f5a37c}
+.src.ai{border-color:rgba(37,152,208,.6);color:#9cc3f0}
+.src.mock{border-color:rgba(238,62,152,.7);color:#f7a3cd}
 .apistat{font-size:11px;color:var(--muted);margin:-4px 0 8px;display:flex;align-items:center;gap:6px}
 .apistat i{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
 .apistat.on i{background:var(--good)} .apistat.off i{background:#c0475c}
@@ -292,9 +292,9 @@ const BANDS=['00–06','06–11','11–14','14–17','17–21','21–24'];
 const BAND_NAME=['심야','아침','점심','오후','저녁','밤'];
 const BAND_HOURS=[6,5,3,3,4,3];
 const AGES=['10대','20대','30대','40대','50대','60대+'];
-const SEL='#f26b2a',SEL2='#a9491d',BASE='#4a8fe0',OTHER='#3a4350',AQUA='#199e70';
-/* building colour = type of the area's #1 industry (blue / aqua / selection orange validated as an all-pairs set) */
-const TYPES=[{key:'market',name:'시장·도매형',color:AQUA,re:/청과|수산|반찬|육류|축산|농산|건어물|도매/},{key:'city',name:'소비·서비스형',color:BASE,re:/[\s\S]/}];
+const SEL='#ee3e98',SEL2='#a3236a',BASE='#2598d0',OTHER='#3a4350',PURPLE='#8f5cff';
+/* building colour = type of the area's #1 industry (blue / purple / selection pink validated as an all-pairs set) */
+const TYPES=[{key:'market',name:'시장·도매형',color:PURPLE,re:/청과|수산|반찬|육류|축산|농산|건어물|도매/},{key:'city',name:'소비·서비스형',color:BASE,re:/[\s\S]/}];
 const typeOf=a=>TYPES.find(t=>t.re.test(a.ind[0][0]));
 const SKY=[
  {s1:'#04060c',s2:'#0d1630',amb:'#6b7bb0',ambI:.28,sun:'#8fa0d0',sunI:.18,sp:[-6,8,-10],emis:1.5,lights:1,ground:'#0b0e14'},
@@ -527,7 +527,7 @@ function init3D(){
   const camera=new THREE.PerspectiveCamera(36,1,.1,150);
   const amb=new THREE.AmbientLight(0xffffff,.4);scene.add(amb);
   const sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(-8,16,10);scene.add(sun);
-  const selLight=new THREE.PointLight(0xf26b2a,0,14,2);scene.add(selLight);
+  const selLight=new THREE.PointLight(0xee3e98,0,14,2);scene.add(selLight);
   const ll=(lat,lon)=>new THREE.Vector3((lon-126.995)*117,0,-(lat-37.53)*148);
   let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
   const smooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)};
@@ -588,7 +588,7 @@ void main(){
   /* data towers (Aipal shape): 3 stages, total height 1 -> group.scale.y = data value */
   let y0=0;const stageGeo=[[.9,.56],[.72,.28],[.54,.16]].map(([w,h])=>{const g=new THREE.BoxGeometry(w,h,w);g.translate(0,y0+h/2,0);y0+=h;return g});
   const edgeGeo=stageGeo.map(g=>new THREE.EdgesGeometry(g));
-  const WARMWIN=new THREE.Color('#ffd2a8');
+  const WARMWIN=new THREE.Color('#ffd0ea');
   const WINDOW_GLSL=(cell)=>`if(abs(vWN.y)<0.5){vec2 q=abs(vWN.x)>0.5?vec2(vWP.z,vWP.y):vec2(vWP.x,vWP.y);
       vec2 c=q/vec2(${cell});vec2 fr=fract(c);vec2 id=floor(c);
       float w=step(0.2,fr.x)*step(fr.x,0.8)*step(0.24,fr.y)*step(fr.y,0.78);
