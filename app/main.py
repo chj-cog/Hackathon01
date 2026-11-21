@@ -14,6 +14,7 @@ def create_app() -> FastAPI:
         allow_origins=s.cors_origin_list,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["X-Is-Mock", "X-Data-Source"],  # 대시보드가 Mock 표시를 읽을 수 있게
     )
     app.include_router(api_router)
     return app
