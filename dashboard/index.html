@@ -264,6 +264,11 @@ th{color:var(--muted)}
 .src{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.02em;padding:1px 7px;border-radius:999px;margin:0 6px 4px 0;border:1px solid var(--line);color:var(--ink-2)}
 .src.ai{border-color:rgba(37,152,208,.6);color:#9cc3f0}
 .src.mock{border-color:rgba(238,62,152,.7);color:#f7a3cd}
+.exq{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ex{font:inherit;font-size:12px;line-height:1.4;text-align:left;color:var(--ink);background:color-mix(in srgb,var(--sel) 14%,var(--panel));border:1px solid color-mix(in srgb,var(--sel) 45%,transparent);border-radius:14px;padding:6px 11px;cursor:pointer}
+.ex:hover{background:color-mix(in srgb,var(--sel) 26%,var(--panel))}
+.raw{margin-top:6px;font-size:11px;color:var(--muted)}
+.raw summary{cursor:pointer}
 .apistat{font-size:11px;color:var(--muted);margin:-4px 0 8px;display:flex;align-items:center;gap:6px}
 .apistat i{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
 .apistat.on i{background:var(--good)} .apistat.off i{background:#c0475c}
@@ -358,10 +363,10 @@ pre{margin:8px 0 0;font-size:11px;line-height:1.55;background:var(--panel);borde
       </div>
       <form class="ask" id="ask">
         <label for="askInput" hidden>질문</label>
-        <input id="askInput" type="text" placeholder="예: 명동에서 카페 차리면?" autocomplete="off">
+        <input id="askInput" type="text" placeholder="예: 홍대 커피-음료 분기별 매출 추이" autocomplete="off">
         <button type="submit">질문</button>
       </form>
-      <p class="pc-note" id="agentSub">질문하면 SQL로 조회하고, 지도를 그 상권으로 옮기고, 해석을 붙여요. 시안이라 말풍선 유형만 답해요.</p>
+      <p class="pc-note" id="agentSub">말풍선 질문이나, 상권 이름과 업종을 넣은 질문(예: 강남이랑 한강로동 한식음식점)은 이 대시보드의 데이터로 답해요.</p>
     </div>
     <div class="pmenu" id="pmenu" data-open="false">
       <div class="qs" id="qs" role="group" aria-label="펄이에게 물어볼 질문 고르기"></div>
@@ -959,6 +964,55 @@ const PRESETS=[
  {q:'밤 9시 이후 매출이 강한 곳은?',run:()=>rankAnswer('night')}
 ];
 function findArea(text){return AREAS.find(a=>text.includes(a.name)||(ALIAS[a.id]||[]).some(k=>text.includes(k)))}
+/* typed questions: which map areas and which industry they name. The team AI server (B) and engine (C) only cover
+   성수·홍대·건대·강남·이태원, so questions naming any other dong are answered here from this page's data (2025Q4). */
+const B_NAME={seongsu:'성수',hongdae:'홍대',kondae:'건대',gangnam:'강남',itaewon:'이태원'};
+const AREA_KEYS=(()=>{const k=[];MAP.forEach(a=>{k.push([a.name,a]);const b=a.name.replace(/동$/,'');if(b.length>=2&&b!==a.name)k.push([b,a]);(ALIAS[a.id]||[]).forEach(x=>k.push([x,a]))});return k.sort((p,q)=>q[0].length-p[0].length)})();
+function findAreas(text){let t=text;const hit=[];for(const[k,a]of AREA_KEYS){const i=t.indexOf(k);if(i<0)continue;if(!hit.some(h=>h.a===a))hit.push({a,i});t=t.split(k).join(' '.repeat(k.length))}return hit.sort((p,q)=>p.i-q.i).map(h=>h.a)}
+const IND_ALL=["PC방", "가구", "가방", "가전제품", "가전제품수리", "고시원", "골프연습장", "네일숍", "노래방", "당구장", "문구", "미곡판매", "미용실", "반찬가게", "분식전문점", "서적", "섬유제품", "세탁소", "수산물판매", "슈퍼마켓", "스포츠 강습", "스포츠클럽", "시계및귀금속", "신발", "안경", "애완동물", "양식음식점", "여관", "예술학원", "완구", "외국어학원", "운동/경기용품", "육류판매", "의료기기", "의약품", "인테리어", "일반교습학원", "일반의류", "일반의원", "일식음식점", "자동차미용", "자동차수리", "자전거 및 기타운송장비", "전자상거래업", "제과점", "조명용품", "중식음식점", "철물점", "청과상", "치과의원", "치킨전문점", "커피-음료", "컴퓨터및주변장치판매", "패스트푸드점", "편의점", "피부관리실", "한식음식점", "한의원", "핸드폰", "호프-간이주점", "화장품", "화초"].sort((p,q)=>q.length-p.length);
+const IND_ALIAS={'성형외과':'일반의원','피부과':'일반의원','안과':'일반의원','내과':'일반의원','병원':'일반의원','치과':'치과의원','약국':'의약품','카페':'커피-음료','커피':'커피-음료','술집':'호프-간이주점','호프':'호프-간이주점','주점':'호프-간이주점','옷가게':'일반의류','옷':'일반의류','헤어':'미용실','네일':'네일숍','치킨':'치킨전문점','한식':'한식음식점','중식':'중식음식점','일식':'일식음식점','양식':'양식음식점','빵집':'제과점','베이커리':'제과점','분식':'분식전문점','학원':'일반교습학원','PC':'PC방','피씨방':'PC방'};
+function findInd(text){const n=IND_ALL.find(x=>text.includes(x));if(n)return{name:n};const k=Object.keys(IND_ALIAS).sort((p,q)=>q.length-p.length).find(x=>text.includes(x));return k?{name:IND_ALIAS[k],said:k}:null}
+const pp=(w,a,b)=>{const c=w.charCodeAt(w.length-1);return (c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28)?a:b},jo=(w,a,b)=>w+pp(w,a,b);
+const eok=v=>v.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const indAmt=(a,n)=>{if(n==='커피-음료')return a.cafe[1];const x=a.ind.find(i=>i[0]===n);return x?x[2]:null};
+function areaAnswer(as,text){
+  const ind=findInd(text);
+  const lines=as.map(a=>{const v=ind?indAmt(a,ind.name):null;
+    return `<b>${a.name}</b>: 전체 매출 <b>${eok(latest(a))}억 원</b> (1년 전보다 ${pct(yoy(a))})`+(ind?(v!=null?`, ${ind.name} <b>${eok(v)}억 원</b>`:`, ${jo(ind.name,'은','는')} 이 동의 매출 상위 8개 업종 밖이라 대시보드에 금액이 없어요`):'')});
+  let verdict='';
+  if(as.length>=2){
+    if(ind){const known=as.filter(a=>indAmt(a,ind.name)!=null);
+      verdict=known.length>=2?`${ind.name} 매출은 <b>${jo([...known].sort((p,q)=>indAmt(q,ind.name)-indAmt(p,ind.name))[0].name,'이','가')}</b> 더 커요.`
+        :`${as.filter(a=>!known.includes(a)).map(a=>a.name).join('·')}의 ${ind.name} 금액이 대시보드에 없어서 ${ind.name}끼리는 비교할 수 없어요. 전체 매출은 ${jo([...as].sort((p,q)=>latest(q)-latest(p))[0].name,'이','가')} 더 커요.`}
+    else verdict=`전체 매출은 <b>${jo([...as].sort((p,q)=>latest(q)-latest(p))[0].name,'이','가')}</b> 더 커요.`}
+  const note=ind&&ind.said?` '${ind.said}'${pp(ind.said,'은','는')} 데이터에서 '${ind.name}' 업종에 포함돼요.`:'';
+  const caveat=/차리|창업|열면|어때|괜찮|좋을/.test(text)?' 매출이 크다고 창업하기 좋은 곳은 아니에요. 점포 수(경쟁)와 임대료는 이 데이터에 없어요.':'';
+  return{area:as[0].id,sql:`-- 대시보드에 들어 있는 OA-22175 데이터(2025년 4분기)로 계산\n-- 지역: ${as.map(a=>a.name).join(', ')}${ind?'\n-- 업종: '+ind.name:''}`,
+    text:'2025년 4분기 기준이에요.<br>'+lines.join('<br>')+(verdict?'<br>'+verdict:'')+note+caveat}
+}
+/* answer from this page's data: area questions first, then the preset question types */
+function localRes(t){const as=findAreas(t),ind=findInd(t);
+  if(as.length&&(as.length>=2||!AREAS.includes(as[0])||(ind&&ind.name!=='커피-음료')))return areaAnswer(as,t);
+  return route(t)}
+function submitAsk(t){
+  const out=findAreas(t).filter(a=>!B_NAME[a.id]);
+  if(API_BASE&&!out.length)return apiAsk(t);
+  apiSeq++;document.querySelector('#ask button').disabled=false;
+  const res=localRes(t);
+  if(res&&API_BASE){const names=out.map(a=>a.name).join('·');
+    res.text=`<span class="src">대시보드 데이터</span><br>AI 분석 서버는 지금 성수·홍대·건대·강남·이태원 5곳만 계산할 수 있어서, ${jo(names,'은','는')} 대시보드 데이터로 답했어요.<br>`+res.text}
+  ask(t,res)
+}
+/* when the AI server asks for more conditions: plain words, plus example questions it can answer (tap to ask) */
+function clarifyHtml(q,raw){
+  const rs=findAreas(q).filter(a=>B_NAME[a.id]).map(a=>B_NAME[a.id]),ind=findInd(q);
+  const regs=(rs.length?rs:['강남','홍대']).slice(0,2),I=ind?ind.name:'커피-음료';
+  const ex=regs.map(r=>`${r} ${I} 분기별 매출 추이 보여줘`);
+  const why=/추천|순위|성공/.test(raw)?'추천이나 창업 적합도는 숫자로 계산하지 않아요. ':'';
+  return `음… 이 질문은 AI 분석 서버가 바로 계산할 수 있는 모양이 아니었어요. ${why}지금은 <b>한 지역의 업종 매출 추이</b>처럼 물어보면 가장 잘 답해요 (지역: 성수·홍대·건대·강남·이태원).`
+    +`<div class="exq">${ex.map(x=>`<button type="button" class="ex" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>`
+    +`<details class="raw"><summary>서버 원문</summary>${esc(raw)}</details>`
+}
 function route(text){
   const a=findArea(text);
   if(/카페|커피/.test(text))return cafeAnswer(a||byId('seongsu'));
@@ -1001,7 +1055,7 @@ function ask(q,res,instant,same){
   askTimer.forEach(clearTimeout);askTimer=[];if(!same)newTurn(q);
   const steps=[...document.querySelectorAll('#trace span')];
   pressChip(q);
-  if(!res){botMood('talk');steps.forEach(s=>s.classList.remove('on'));document.getElementById('sql').textContent='-- 매칭되는 질문 유형이 없어요';document.getElementById('answer').innerHTML='시안에서는 매출 1위 업종, 카페 창업, 주말 비중, 성장률, 야간 매출 질문에 답할 수 있어요. 실제 버전에서는 LLM이 질문을 SQL로 바꿔서 어떤 질문이든 조회해요.';return}
+  if(!res){botMood('talk');steps.forEach(s=>s.classList.remove('on'));document.getElementById('sql').textContent='-- 매칭되는 질문 유형이 없어요';document.getElementById('answer').innerHTML='대시보드 데이터로는 상권 이름(예: 강남, 한강로동)이나 업종이 들어간 질문, 그리고 매출 1위 업종·주말 비중·성장률·야간 매출 질문에 답할 수 있어요.';return}
   const fin=()=>{document.getElementById('sql').textContent=res.sql;document.getElementById('answer').innerHTML=res.text;if(!instant)botMood('talk');select(res.area,!instant)};
   if(instant||reduce){steps.forEach(s=>s.classList.add('on'));fin();return}
   steps.forEach(s=>s.classList.remove('on'));document.getElementById('sql').textContent='…';document.getElementById('answer').textContent='음… 데이터를 찾아보는 중이에요';botMood('think');
@@ -1036,7 +1090,7 @@ async function askApi(q){
 }
 function setApiStat(state,msg){const el=document.getElementById('apiStat');el.hidden=false;el.className='apistat '+state;el.querySelector('span').textContent=msg}
 if(API_BASE){
-  document.getElementById('agentSub').textContent='직접 입력한 질문은 팀 AI 분석 서버로 보내요(성수·홍대·건대·강남·이태원). 아래 버튼은 이 대시보드의 데이터로 바로 답해요.';
+  document.getElementById('agentSub').textContent='직접 입력한 질문은 팀 AI 분석 서버가 계산해요 (성수·홍대·건대·강남·이태원, 예: 홍대 커피-음료 분기별 매출 추이). 다른 동이 들어간 질문과 말풍선 질문은 이 대시보드의 데이터로 답해요.';
   setApiStat('','AI 분석 서버 확인 중…');
   fetch(API_BASE+'/health',{headers:API_H}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(h=>setApiStat('on',`AI 분석 서버 연결됨 · ${h.ollama_model||''}${h.env?' · '+h.env:''}`)).catch(()=>setApiStat('off','AI 분석 서버에 연결할 수 없어요 · 대시보드 데이터로 답해요'));
 }
@@ -1051,13 +1105,14 @@ async function apiAsk(q){
     sqlEl.textContent=res.sql||'-- 계산 엔진이 SQL 없이(pandas) 계산했어요';
     ans.innerHTML=`<span class="src ai">AI 분석 서버</span>`+(res.mock?`<span class="src mock">테스트용 Mock 데이터 · 실제 분석 결과 아님</span>`:'')+'<br>'+esc(res.text).replace(/\n/g,'<br>');
     if(res.area)select(res.area,true);return}
-  if(res.kind==='clarify'){sqlEl.textContent='-- 질문이 부족해서 계산하지 않았어요';ans.innerHTML=`<span class="src ai">AI 분석 서버</span><br>${esc(res.text)}`;return}
+  if(res.kind==='clarify'){sqlEl.textContent='-- 질문이 부족해서 계산하지 않았어요';ans.innerHTML=`<span class="src ai">AI 분석 서버</span><br>`+clarifyHtml(q,res.text);return}
   if(res.kind==='offline')setApiStat('off','AI 분석 서버에 연결할 수 없어요 · 대시보드 데이터로 답해요');
-  const local=route(q);
+  const local=localRes(q);
   if(local)ask(q,{...local,text:`<span class="src">${esc(res.text)} 대시보드 데이터로 답했어요</span><br>`+local.text},false,true);
-  else{steps.forEach(s=>s.classList.remove('on'));sqlEl.textContent='--';ans.innerHTML=`<span class="src">${esc(res.text)}</span><br>대시보드 데이터로는 매출 1위 업종, 카페 창업, 주말 비중, 성장률, 야간 매출 질문에 답할 수 있어요.`}
+  else{steps.forEach(s=>s.classList.remove('on'));sqlEl.textContent='--';ans.innerHTML=`<span class="src">${esc(res.text)}</span><br>대시보드 데이터로는 상권 이름이나 업종이 들어간 질문, 그리고 매출 1위 업종·주말 비중·성장률·야간 매출 질문에 답할 수 있어요.`}
 }
-document.getElementById('ask').addEventListener('submit',e=>{e.preventDefault();const inp=document.getElementById('askInput'),t=inp.value.trim();if(!t)return;inp.value='';if(API_BASE)apiAsk(t);else ask(t,route(t))});
+document.getElementById('ask').addEventListener('submit',e=>{e.preventDefault();const inp=document.getElementById('askInput'),t=inp.value.trim();if(!t)return;inp.value='';submitAsk(t)});
+document.getElementById('pcList').addEventListener('click',e=>{const b=e.target.closest('.ex');if(b&&!document.querySelector('#ask button').disabled)submitAsk(b.dataset.q)});
 
 render(true);init3D();setBand(band);try{initPearl()}catch(e){}
 })();
