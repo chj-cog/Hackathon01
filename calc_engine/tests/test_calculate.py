@@ -67,7 +67,8 @@ def test_q4_trend_year_month_alias_groups_by_quarter():
     assert body["results"][-1]["values"]["est_sales.sum"] == 17_096_057_556
     notes = body["results"][0]["notes"]
     assert any(n.startswith("quarter_granularity") for n in notes)
-    assert any(n.startswith("pre_2024_basis_unconfirmed") for n in notes)
+    # 제공 기관 답변(2026-11-20): 2021년부터 새 기준으로 재산출 → 2023년 이전 주의 안내를 붙이지 않음
+    assert not any(n.startswith("pre_2024") for n in notes)
 
 
 def test_q10_growth_rate_year_over_year():
@@ -79,7 +80,6 @@ def test_q10_growth_rate_year_over_year():
     assert status == 200
     assert body["results"][0]["values"]["est_sales.growth_rate"] == 83_354_980_644 / 79_543_156_367 - 1
     assert body["applied"]["baseline_period"] == {"start": "2024-10", "end": "2024-12"}
-    assert not any(n.startswith("pre_2024") for n in body["results"][0]["notes"])  # 2024Q4~2025Q4만 사용
 
 
 def test_growth_baseline_missing_is_null_with_reason():
