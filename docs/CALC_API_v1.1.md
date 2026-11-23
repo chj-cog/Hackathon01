@@ -25,7 +25,6 @@ C 엔진(`calc_engine/`)은 **v1.0 요청·응답 틀을 그대로 지키면서*
 |---|---|
 | `baseline_zero`, `baseline_missing` | v1.0과 같음 (growth_rate 값 null 사유) |
 | `quarter_granularity: …` | year_month 요청을 분기로 계산함 |
-| `pre_2024_basis_unconfirmed: …` | 2023년 이전 분기를 씀. 공간 단위 변경 전 자료의 재산출 여부 확인 중 |
 | `excludes_corporate_sales: …` | 성별·연령 지표. 법인 매출이 빠져 있어 분모가 성별·연령 합계 |
 | `industry_group: 카페=커피-음료` | 업종 묶음 이름을 실제 업종으로 펼침 |
 | `region_dong_count: 4` | 지역으로 묶을 때 그 지역의 포함 동 개수 |

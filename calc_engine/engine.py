@@ -23,7 +23,6 @@ from calc_engine.data import (
 
 V10_OPS = {"sum", "avg", "growth_rate"}
 GROWTH_FORMULA = "(current - baseline) / baseline"
-NEW_BASIS_FROM = "20241"  # 2024년부터 공간 단위가 표준단위구역으로 바뀜 (docs/DATA.md)
 
 
 # ---------------- 요청 (B의 v1.0 스키마와 같은 모양, op만 v1.1 확장 포함) ----------------
@@ -250,18 +249,14 @@ def _calculate(df: pd.DataFrame, req: CalcRequest) -> dict:
     if cur.empty:
         raise EngineError("NO_DATA", "조건에 맞는 데이터가 없습니다")
 
-    used_q = set(cur["기준_년분기_코드"])
     if req.growth:
         cur_g = data[data["기준_년분기_코드"].isin(quarters_in(req.growth.current_period, all_q, "growth.current_period"))]
         base_q = quarters_in(req.growth.baseline_period, all_q, "growth.baseline_period")
         base_g = data[data["기준_년분기_코드"].isin(base_q)]
-        used_q |= set(cur_g["기준_년분기_코드"]) | set(base_g["기준_년분기_코드"])
 
     # 전체 행에 붙는 안내
     if any(TIME_ALIASES.get(g) for g in req.group_by) or any(TIME_ALIASES.get(f.column) for f in req.filters):
         notes.append("quarter_granularity: 데이터가 분기 단위라 year_month 대신 분기(예: 2025Q4)로 계산했습니다")
-    if used_q and min(used_q) < NEW_BASIS_FROM:
-        notes.append("pre_2024_basis_unconfirmed: 2024년부터 공간 단위가 바뀌었고 2021~2023년 자료의 재산출 여부는 확인 중입니다")
     if families & {"gender", "age"}:
         notes.append("excludes_corporate_sales: 성별·연령 매출에는 법인 매출이 빠져 있어 비율의 분모는 성별·연령 합계입니다")
 
